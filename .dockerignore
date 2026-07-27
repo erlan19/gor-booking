@@ -1,0 +1,12 @@
+node_modules
+frontend/gor-client/node_modules
+.git
+playwright-report
+test-results
+e2e-tests
+*.md
+!README.md
+.env
+.env.local
+dist
+build

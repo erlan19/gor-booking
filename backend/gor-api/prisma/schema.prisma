@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ─────────────────────────────────────────────────
+enum Role {
+  CLIENT
+  CASHIER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  PAID
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+// ─── USERS ─────────────────────────────────────────────────
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  role         Role     @default(CLIENT)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bookings        Booking[] @relation("UserBookings")
+  cashierBookings Booking[] @relation("CashierBookings")
+
+  @@map("users")
+}
+
+// ─── COURTS ────────────────────────────────────────────────
+model Court {
+  id           String   @id @default(uuid())
+  name         String
+  type         String
+  pricePerHour Int
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bookings     Booking[]
+  blockedSlots ScheduleBlocked[]
+
+  @@map("courts")
+}
+
+// ─── BOOKINGS ──────────────────────────────────────────────
+model Booking {
+  id             String        @id @default(uuid())
+  courtId        String
+  court          Court         @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation("UserBookings", fields: [userId], references: [id], onDelete: SetNull)
+  cashierId      String?
+  cashier        User?         @relation("CashierBookings", fields: [cashierId], references: [id], onDelete: SetNull)
+  customerName   String?
+  customerPhone  String?
+
+  bookingDate    DateTime
+  startTime      String
+  endTime        String
+  totalPrice     Int
+
+  status         BookingStatus @default(PENDING)
+  createdBy      String        @default("CLIENT")
+  notes          String?
+
+  paymentId      String?       @unique
+  paymentExpiry  DateTime?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  payment        Payment?
+
+  @@unique([courtId, bookingDate, startTime])
+  @@index([courtId, bookingDate])
+  @@index([userId])
+  @@index([status])
+  @@map("bookings")
+}
+
+// ─── PAYMENTS ──────────────────────────────────────────────
+model Payment {
+  id            String        @id @default(uuid())
+  bookingId     String        @unique
+  booking       Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount        Int
+  method        String?
+  gatewayRefId  String?
+  gatewayStatus String?
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  logs          PaymentLog[]
+
+  @@map("payments")
+}
+
+// ─── PAYMENT LOGS ──────────────────────────────────────────
+model PaymentLog {
+  id        String   @id @default(uuid())
+  paymentId String
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  action    String
+  payload   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@map("payment_logs")
+}
+
+// ─── SCHEDULE BLOCKED ──────────────────────────────────────
+model ScheduleBlocked {
+  id        String   @id @default(uuid())
+  courtId   String
+  court     Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  date      DateTime
+  startTime String
+  endTime   String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([courtId, date])
+  @@map("schedule_blocked")
+}
