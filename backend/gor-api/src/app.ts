@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import { PrismaClient } from '@prisma/client';
 import { env } from './config/env.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import authRoutes from './modules/auth/auth.routes.js';
@@ -16,6 +17,27 @@ const app = express();
 app.use(helmet());
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
+
+// Diagnostic endpoint — reveals DB connection status from inside Railway
+app.get('/api/v1/debug', async (_req, res) => {
+  const dbUrl = process.env.DATABASE_URL || '(not set)';
+  const info: Record<string, unknown> = {
+    node: process.version,
+    env: process.env.RAILWAY_ENVIRONMENT || 'unknown',
+    service: process.env.RAILWAY_SERVICE_NAME || 'unknown',
+    dbUrl: dbUrl.substring(0, 80) + '...',
+  };
+  try {
+    const p = new PrismaClient();
+    await p.$queryRawUnsafe('SELECT 1 as ok');
+    info.dbStatus = 'connected';
+    await p.$disconnect();
+  } catch (e: unknown) {
+    info.dbStatus = 'error';
+    info.dbError = e instanceof Error ? e.message.substring(0, 200) : String(e);
+  }
+  res.json(info);
+});
 
 // Health check
 app.get('/api/v1/health', (_req, res) => {
