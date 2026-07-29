@@ -67,8 +67,8 @@ export async function getReport(req: Request, res: Response) {
     include: { payment: true },
   });
 
-  const totalRevenue = bookings.reduce((sum, b) => {
-    if (b.payment?.status === 'SUCCESS') {
+  const totalRevenue = bookings.reduce((sum: any, b: any) => {
+    if (b.payment?.status === 'SUCCESS' && b.totalPrice) {
       return sum + b.totalPrice;
     }
     return sum;

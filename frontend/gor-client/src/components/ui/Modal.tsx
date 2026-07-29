@@ -7,7 +7,7 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   'data-testid'?: string;
 }
 
@@ -28,14 +28,14 @@ export function Modal({ open, onClose, title, children, size = 'md', 'data-testi
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" data-testid={dataTestId}>
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/40 animate-fade-in" onClick={onClose} />
       <div className={clsx(
-        'relative z-50 bg-white rounded-xl shadow-xl max-h-[90vh] overflow-y-auto',
-        { 'w-full max-w-sm': size === 'sm', 'w-full max-w-lg': size === 'md', 'w-full max-w-2xl': size === 'lg' }
+        'relative z-50 bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto animate-scale-in animate-fade-in',
+        { 'w-full max-w-sm': size === 'sm', 'w-full max-w-lg': size === 'md', 'w-full max-w-2xl': size === 'lg', 'w-full max-w-4xl': size === 'xl' }
       )}>
-        <div className="flex items-center justify-between p-4 border-b">
-          {title && <h2 className="text-lg font-semibold">{title}</h2>}
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X size={20} /></button>
+        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+          {title && <h2 className="text-lg font-semibold text-dark-900">{title}</h2>}
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors"><X size={20} /></button>
         </div>
         <div className="p-4">{children}</div>
       </div>

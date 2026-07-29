@@ -68,6 +68,102 @@ export async function createMidtransTransaction(req: Request, res: Response) {
   res.json({ token: transaction.token, redirectUrl: transaction.redirect_url });
 }
 
+// ── 1b. createDummyPayment -- POST /api/v1/payments/dummy (for testing) ──
+// Only available when PAYMENT_MODE=dummy
+
+export async function createDummyPayment(req: Request, res: Response) {
+  // Check if dummy mode is enabled
+  if (env.PAYMENT_MODE !== 'dummy') {
+    throw new AppError(403, 'Dummy payment mode not enabled');
+  }
+
+  const { bookingId, success = true } = req.body;
+
+  if (!bookingId || typeof bookingId !== 'string') {
+    throw new AppError(400, 'bookingId is required');
+  }
+
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { payment: true },
+  });
+
+  if (!booking) {
+    throw new AppError(404, 'Booking not found');
+  }
+
+  if (booking.userId !== req.user!.userId) {
+    throw new AppError(403, 'Not your booking');
+  }
+
+  if (booking.status !== 'PENDING') {
+    throw new AppError(400, 'Booking is not in PENDING status');
+  }
+
+  if (!booking.payment) {
+    throw new AppError(400, 'No payment record for this booking');
+  }
+
+  // Simulate payment processing
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  if (success) {
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: { id: booking.payment!.id },
+        data: {
+          status: 'SUCCESS',
+          method: 'dummy',
+          paidAt: new Date(),
+          gatewayRefId: `dummy_${Date.now()}`,
+          gatewayStatus: 'succeeded',
+        },
+      }),
+      prisma.booking.update({
+        where: { id: bookingId },
+        data: { status: 'PAID' },
+      }),
+    ]);
+  } else {
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: { id: booking.payment!.id },
+        data: {
+          status: 'FAILED',
+          method: 'dummy',
+          gatewayRefId: `dummy_${Date.now()}`,
+          gatewayStatus: 'failed',
+        },
+      }),
+      prisma.booking.update({
+        where: { id: bookingId },
+        data: { status: 'CANCELLED' },
+      }),
+    ]);
+  }
+
+  const updatedBooking = await prisma.booking.findUnique({ where: { id: bookingId } });
+  if (updatedBooking) {
+    emitBookingUpdated(updatedBooking, 'updated');
+  }
+
+  await prisma.paymentLog.create({
+    data: {
+      paymentId: booking.payment!.id,
+      action: success ? 'dummy_success' : 'dummy_failed',
+      payload: JSON.stringify({ success, bookingId, timestamp: new Date().toISOString() }),
+      ipAddress: req.ip || null,
+    },
+  });
+
+  res.json({
+    status: 'ok',
+    success,
+    message: success ? 'Dummy payment succeeded' : 'Dummy payment failed',
+    booking: updatedBooking
+  });
+}
+
 // ── 2. handleWebhook -- POST /api/v1/payments/webhook (public) ──
 
 export async function handleWebhook(req: Request, res: Response) {

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import Layout from '../../components/shared/Layout';
 import { useCourts, type Court } from '../../hooks/useCourts';
 import { useSchedule, type Booking as ScheduleBooking } from '../../hooks/useSchedule';
@@ -9,6 +9,7 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import api from '../../lib/api';
 import { useUiStore } from '../../store/uiStore';
 import { Button } from '../../components/ui/Button';
+import DummyPaymentPage from './DummyPaymentPage';
 
 function Dashboard() {
   return (
@@ -194,6 +195,7 @@ export default function ClientLayoutRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="courts" element={<CourtsPage />} />
         <Route path="bookings" element={<BookingsPage />} />
+        <Route path="payment" element={<DummyPaymentPage />} />
       </Routes>
     </Layout>
   );

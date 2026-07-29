@@ -1,11 +1,15 @@
 import cron from 'node-cron';
 import prisma from '../lib/prisma.js';
+import { AppError } from '../middlewares/error.middleware.js';
 
 export function startAutoCancelJob() {
   // Run every minute
   cron.schedule('* * * * *', async () => {
     try {
+      console.log('Auto-cancel job running...');
       const now = new Date();
+      console.log('Searching for expired pending bookings...');
+
       const result = await prisma.booking.updateMany({
         where: {
           status: 'PENDING',
@@ -23,14 +27,22 @@ export function startAutoCancelJob() {
           select: { id: true },
         });
         if (cancelledIds.length > 0) {
-          await prisma.payment.updateMany({
+          console.log(`Failing payments for ${cancelledIds.length} cancelled bookings...`);
+          const paymentResult = await prisma.payment.updateMany({
             where: { bookingId: { in: cancelledIds.map((b) => b.id) }, status: 'PENDING' },
             data: { status: 'FAILED' },
           });
+          console.log(`Failed ${paymentResult.count} payment(s)`);
         }
+      } else {
+        console.log('No expired pending bookings found');
       }
     } catch (err) {
       console.error('Auto-cancel job error:', err);
+      // Don't crash the cron job on database errors
+      if (err instanceof AppError) {
+        console.error(`AppError: ${err.statusCode} - ${err.message}`);
+      }
     }
   });
 

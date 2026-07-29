@@ -2,7 +2,11 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
+// Socket URL configuration for production
+const getSocketUrl = () => {
+  // Check for environment variable first, then use current origin
+  return import.meta.env.VITE_SOCKET_URL || `${window.location.protocol.replace('http', 'ws')}//${window.location.hostname}`;
+};
 
 export function useSocket() {
   const [isConnected, setIsConnected] = useState(false);
@@ -10,10 +14,13 @@ export function useSocket() {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
 
+  // Memoize the socket URL to avoid recalculation
+  const socketUrl = getSocketUrl();
+
   useEffect(() => {
     if (!user || !token) return;
 
-    const socket = io(SOCKET_URL, {
+    const socket = io(socketUrl, {
       path: '/ws',
       auth: { token },
       transports: ['polling', 'websocket'],
@@ -36,7 +43,7 @@ export function useSocket() {
       socketRef.current = null;
       setIsConnected(false);
     };
-  }, [user?.id, token]);
+  }, [user?.id, token, socketUrl]);
 
   const onBookingUpdated = useCallback((handler: (data: any) => void) => {
     socketRef.current?.on('booking:updated', handler);

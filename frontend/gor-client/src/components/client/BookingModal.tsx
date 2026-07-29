@@ -26,9 +26,14 @@ export function BookingModal({ open, onClose, onSuccess, court, hour, date }: Bo
   const handleConfirm = async () => {
     setSubmitting(true);
     try {
-      await api.post('/bookings', { courtId: court.id, bookingDate, startTime, endTime });
+      const { data } = await api.post('/bookings', { courtId: court.id, bookingDate, startTime, endTime });
       addToast('Booking berhasil!', 'success');
       onSuccess();
+
+      // Redirect to payment page with booking details
+      const bookingId = data.booking?.id || data.id;
+      const paymentUrl = `/client/payment?bookingId=${bookingId}&amount=${court.pricePerHour}&court=${encodeURIComponent(court.name)}&date=${encodeURIComponent(format(date, 'dd MMMM yyyy'))}&time=${encodeURIComponent(`${startTime} – ${endTime}`)}`;
+      window.location.href = paymentUrl;
       onClose();
     } catch (err: any) {
       addToast(err.response?.data?.message || 'Gagal membuat booking', 'error');

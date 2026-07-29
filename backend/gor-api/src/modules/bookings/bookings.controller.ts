@@ -77,7 +77,7 @@ export async function createBooking(req: Request, res: Response) {
     throw new AppError(400, 'bookingDate must be today or future');
   }
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: any) => {
     const taken = await tx.booking.findFirst({
       where: {
         courtId,
@@ -188,7 +188,7 @@ export async function createBookingWalkin(req: Request, res: Response) {
 
   let result: any;
   try {
-    result = await prisma.$transaction(async (tx) => {
+    result = await prisma.$transaction(async (tx: any) => {
       const court = await tx.court.findUnique({ where: { id: courtId } });
       if (!court || !court.isActive) throw new AppError(400, 'Court not found or inactive');
 

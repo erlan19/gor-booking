@@ -2,7 +2,7 @@ import { clsx } from 'clsx';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info';
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'primary' | 'secondary';
   className?: string;
 }
 
@@ -17,6 +17,8 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
           'bg-yellow-100 text-yellow-800': variant === 'warning',
           'bg-red-100 text-red-800': variant === 'danger',
           'bg-blue-100 text-blue-800': variant === 'info',
+          'bg-primary-100 text-primary-800': variant === 'primary',
+          'bg-secondary-100 text-secondary-800': variant === 'secondary',
         },
         className
       )}
