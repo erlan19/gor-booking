@@ -1,9 +1,8 @@
 const { Server } = require('socket.io');
-const { type Server as HttpServer } = require('http');
 
-let io: Server;
+let io;
 
-function initSocket(httpServer: HttpServer) {
+function initSocket(httpServer) {
   io = new Server(httpServer, {
     path: '/ws',
     cors: { origin: ['http://localhost:5173', 'http://localhost:5174'], methods: ['GET', 'POST'], credentials: true },
