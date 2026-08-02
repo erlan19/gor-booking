@@ -1,16 +1,16 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import { PrismaClient } from '@prisma/client';
-import { env } from './config/env.js';
-import { errorHandler } from './middlewares/error.middleware.js';
-import authRoutes from './modules/auth/auth.routes.js';
-import bookingRoutes from './modules/bookings/bookings.routes.js';
-import courtRoutes from './modules/courts/courts.routes.js';
-import paymentRoutes from './modules/payments/payments.routes.js';
-import scheduleRoutes from './modules/schedules/schedules.routes.js';
-import userRoutes from './modules/users/users.routes.js';
-import adminRoutes from './modules/admin/admin.routes.js';
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const { PrismaClient } = require('@prisma/client');
+const { env } = require('./config/env');
+const { errorHandler } = require('./middlewares/error.middleware');
+const authRoutes = require('./modules/auth/auth.routes');
+const bookingRoutes = require('./modules/bookings/bookings.routes');
+const courtRoutes = require('./modules/courts/courts.routes');
+const paymentRoutes = require('./modules/payments/payments.routes');
+const scheduleRoutes = require('./modules/schedules/schedules.routes');
+const userRoutes = require('./modules/users/users.routes');
+const adminRoutes = require('./modules/admin/admin.routes');
 
 const app = express();
 
@@ -56,4 +56,4 @@ app.use('/api/v1/admin', adminRoutes);
 // Global error handler (must be last)
 app.use(errorHandler);
 
-export default app;
+module.exports = app;

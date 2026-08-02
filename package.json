@@ -7,6 +7,6 @@
   },
   "scripts": {
     "build": "cd backend/gor-api && npm install && npm run build",
-    "start": "cd backend/gor-api && npx prisma db push --skip-generate 2>/dev/null; npx tsx src/index.ts"
+    "start": "cd backend/gor-api && node src/index.js"
   }
 }

@@ -1,9 +1,9 @@
-import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
-import { env } from '../config/env.js';
+const { SignJWT, jwtVerify, type JWTPayload } = require('jose');
+const { env } = require('../config/env');
 
 const secret = new TextEncoder().encode(env.JWT_SECRET);
 
-export interface TokenPayload extends JWTPayload {
+interface TokenPayload extends JWTPayload {
   userId: string;
   email: string;
   name: string;

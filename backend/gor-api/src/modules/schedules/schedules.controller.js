@@ -1,6 +1,6 @@
-import { type Request, type Response } from 'express';
-import prisma from '../../lib/prisma.js';
-import { AppError } from '../../middlewares/error.middleware.js';
+const { type Request, type Response } = require('express');
+const prisma = require('../../lib/prisma');
+const { AppError } = require('../../middlewares/error.middleware');
 
 function normalizeDate(dateStr: string): Date {
   return new Date(dateStr + 'T00:00:00.000Z');

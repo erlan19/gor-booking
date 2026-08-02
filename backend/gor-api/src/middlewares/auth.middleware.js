@@ -1,5 +1,5 @@
-import { type Request, type Response, type NextFunction } from 'express';
-import { verifyToken, type TokenPayload } from '../lib/jwt.js';
+const { type Request, type Response, type NextFunction } = require('express');
+const { verifyToken, type TokenPayload } = require('../lib/jwt');
 
 declare global {
   namespace Express {

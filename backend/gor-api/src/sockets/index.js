@@ -1,9 +1,9 @@
-import { Server } from 'socket.io';
-import { type Server as HttpServer } from 'http';
+const { Server } = require('socket.io');
+const { type Server as HttpServer } = require('http');
 
 let io: Server;
 
-export function initSocket(httpServer: HttpServer) {
+function initSocket(httpServer: HttpServer) {
   io = new Server(httpServer, {
     path: '/ws',
     cors: { origin: ['http://localhost:5173', 'http://localhost:5174'], methods: ['GET', 'POST'], credentials: true },
@@ -34,7 +34,7 @@ export function initSocket(httpServer: HttpServer) {
   });
 }
 
-export function getIO(): Server {
+function getIO(): Server {
   if (!io) throw new Error('Socket.io not initialized');
   return io;
 }
@@ -59,14 +59,14 @@ function emitToBookingRooms(event: string, booking: any, extra: Record<string, u
 }
 
 // Emit functions (called from controllers)
-export function emitBookingUpdated(booking: any, action: string) {
+function emitBookingUpdated(booking: any, action: string) {
   emitToBookingRooms('booking:updated', booking, { action });
 }
 
-export function emitBookingCreated(booking: any) {
+function emitBookingCreated(booking: any) {
   emitToBookingRooms('booking:created', booking);
 }
 
-export function emitBookingCancelled(booking: any) {
+function emitBookingCancelled(booking: any) {
   emitToBookingRooms('booking:cancelled', booking);
 }
