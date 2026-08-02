@@ -1,14 +1,34 @@
-// Vercel Serverless Function Handler
-// This file exports the Express app as a serverless function
+// Vercel Serverless Handler - Minimal working Express app
 
-// Ensure environment variables are loaded
-if (!process.env.DATABASE_URL) {
-  console.error('[API] WARNING: DATABASE_URL is not set');
-}
+const express = require('express');
+const app = express();
 
-// Import and export the Express app directly
-const app = require('../backend/gor-api/dist/app.js');
+app.use(express.json());
 
-// For Vercel, export as default
+// Health check
+app.get('/api/v1/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Debug info
+app.get('/api/v1/debug', (req, res) => {
+  res.json({
+    node: process.version,
+    env: process.env.NODE_ENV || 'production',
+    status: 'API running',
+    database: process.env.DATABASE_URL ? 'configured' : 'not set'
+  });
+});
+
+// Default route
+app.get('/', (req, res) => {
+  res.json({ message: 'GOR Booking API - Vercel Serverless', version: '1.0.0' });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found', path: req.path });
+});
+
 module.exports = app;
 
