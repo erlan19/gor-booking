@@ -1,8 +1,8 @@
-import { type Request, type Response } from 'express';
-import bcrypt from 'bcryptjs';
-import prisma from '../../lib/prisma.js';
-import { signToken } from '../../lib/jwt.js';
-import { AppError } from '../../middlewares/error.middleware.js';
+const { type Request, type Response } = require('express');
+const bcrypt = require('bcryptjs');
+const prisma = require('../../lib/prisma');
+const { signToken } = require('../../lib/jwt');
+const { AppError } = require('../../middlewares/error.middleware');
 
 // POST /api/v1/auth/register
 export async function register(req: Request, res: Response) {

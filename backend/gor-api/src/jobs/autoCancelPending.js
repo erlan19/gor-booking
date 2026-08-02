@@ -1,8 +1,8 @@
-import cron from 'node-cron';
-import prisma from '../lib/prisma.js';
-import { AppError } from '../middlewares/error.middleware.js';
+const cron = require('node-cron');
+const prisma = require('../lib/prisma');
+const { AppError } = require('../middlewares/error.middleware');
 
-export function startAutoCancelJob() {
+function startAutoCancelJob() {
   // Run every minute
   cron.schedule('* * * * *', async () => {
     try {

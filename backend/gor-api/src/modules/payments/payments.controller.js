@@ -1,10 +1,10 @@
-import { type Request, type Response } from 'express';
-import crypto from 'crypto';
-import prisma from '../../lib/prisma.js';
-import midtrans from '../../lib/midtrans.js';
-import { AppError } from '../../middlewares/error.middleware.js';
-import { env } from '../../config/env.js';
-import { emitBookingUpdated } from '../../sockets/index.js';
+const { type Request, type Response } = require('express');
+const crypto = require('crypto');
+const prisma = require('../../lib/prisma');
+const midtrans = require('../../lib/midtrans');
+const { AppError } = require('../../middlewares/error.middleware');
+const { env } = require('../../config/env');
+const { emitBookingUpdated } = require('../../sockets/index');
 
 // ── 1. createMidtransTransaction -- POST /api/v1/payments/create ──
 

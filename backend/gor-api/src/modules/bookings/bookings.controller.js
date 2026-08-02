@@ -1,8 +1,8 @@
-import { type Request, type Response } from 'express';
-import prisma from '../../lib/prisma.js';
-import { AppError } from '../../middlewares/error.middleware.js';
-import midtrans from '../../lib/midtrans.js';
-import { emitBookingCreated, emitBookingCancelled, emitBookingUpdated } from '../../sockets/index.js';
+const { type Request, type Response } = require('express');
+const prisma = require('../../lib/prisma');
+const { AppError } = require('../../middlewares/error.middleware');
+const midtrans = require('../../lib/midtrans');
+const { emitBookingCreated, emitBookingCancelled, emitBookingUpdated } = require('../../sockets/index');
 
 // ── Helpers ────────────────────────────────────────────────
 

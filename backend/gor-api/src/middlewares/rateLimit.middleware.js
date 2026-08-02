@@ -1,7 +1,7 @@
-import rateLimit from 'express-rate-limit';
+const rateLimit = require('express-rate-limit');
 
 // Login rate limiter: 5 attempts per 15 minutes
-export const loginLimiter = rateLimit({
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5,
   standardHeaders: true,
@@ -15,7 +15,7 @@ export const loginLimiter = rateLimit({
 });
 
 // General API rate limiter: 100 requests per minute
-export const apiLimiter = rateLimit({
+const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100,
   standardHeaders: true,

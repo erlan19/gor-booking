@@ -1,9 +1,9 @@
-import MidtransClient from 'midtrans-client';
-import { env } from '../config/env.js';
+const MidtransClient = require('midtrans-client');
+const { env } = require('../config/env');
 
 let _snap: MidtransClient.Snap | null = null;
 
-export function getMidtransSnap() {
+function getMidtransSnap() {
   if (!_snap) {
     _snap = new MidtransClient.Snap({
       isProduction: env.MIDTRANS_IS_PRODUCTION,
@@ -15,14 +15,14 @@ export function getMidtransSnap() {
 }
 
 /** Lazy proxy: first access initializes the Snap client */
-export const snap: MidtransClient.Snap = new Proxy({} as MidtransClient.Snap, {
+const snap: MidtransClient.Snap = new Proxy({} as MidtransClient.Snap, {
   get(_target, prop, _receiver) {
     return (getMidtransSnap() as any)[prop];
   },
 });
 
 // ponytail: backward-compat wrapper; remove when all callers use `snap` directly
-export default {
+module.exports = {
   createTransaction: async (params: {
     transaction_details: { order_id: string; gross_amount: number };
     customer_details?: { first_name?: string; email?: string; phone?: string };

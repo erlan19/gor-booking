@@ -1,13 +1,13 @@
-import { Router } from 'express';
+const { Router } = require('express');
 import {
   createMidtransTransaction,
   createDummyPayment,
   handleWebhook,
   confirmCashPayment,
 } from './payments.controller.js';
-import { authenticate } from '../../middlewares/auth.middleware.js';
-import { requireRole } from '../../middlewares/role.middleware.js';
-import { wrap } from '../../middlewares/error.middleware.js';
+const { authenticate } = require('../../middlewares/auth.middleware');
+const { requireRole } = require('../../middlewares/role.middleware');
+const { wrap } = require('../../middlewares/error.middleware');
 
 const router = Router();
 
@@ -16,4 +16,4 @@ router.post('/dummy', authenticate, requireRole('CLIENT'), wrap(createDummyPayme
 router.post('/webhook', wrap(handleWebhook));
 router.post('/confirm', authenticate, requireRole('CASHIER', 'ADMIN'), wrap(confirmCashPayment));
 
-export default router;
+module.exports = router;

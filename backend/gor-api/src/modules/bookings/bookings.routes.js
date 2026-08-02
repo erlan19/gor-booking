@@ -1,4 +1,4 @@
-import { Router } from 'express';
+const { Router } = require('express');
 import {
   listBookings,
   createBooking,
@@ -8,9 +8,9 @@ import {
   cancelBooking,
   rescheduleBooking,
 } from './bookings.controller.js';
-import { authenticate } from '../../middlewares/auth.middleware.js';
-import { requireRole } from '../../middlewares/role.middleware.js';
-import { wrap } from '../../middlewares/error.middleware.js';
+const { authenticate } = require('../../middlewares/auth.middleware');
+const { requireRole } = require('../../middlewares/role.middleware');
+const { wrap } = require('../../middlewares/error.middleware');
 
 const router = Router();
 
@@ -35,4 +35,4 @@ router.patch('/:id/cancel', authenticate, requireRole('CLIENT', 'CASHIER', 'ADMI
 // PATCH /bookings/:id/reschedule -- client reschedule own booking
 router.patch('/:id/reschedule', authenticate, requireRole('CLIENT'), wrap(rescheduleBooking));
 
-export default router;
+module.exports = router;
