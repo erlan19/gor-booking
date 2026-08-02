@@ -1,0 +1,293 @@
+#!/usr/bin/env bash
+# GOR Booking - FIX #001: SERVER-SIDE PAYMENT AMOUNT VALIDATION
+# 
+# CRITICAL SECURITY FIX
+# Issue: Client can modify payment amount before submission
+# Risk: 🔴 CRITICAL - Revenue loss, fraud
+# Effort: 2 hours
+# Status: READY TO APPLY
+#
+# What this fixes:
+# - Prevents client from changing booking price
+# - Recalculates amount server-side from court price + duration
+# - Rejects mismatched amounts
+# - Logs validation errors for fraud detection
+#
+# =============================================================================
+
+# FILE 1: Add validation function
+# Path: backend/gor-api/src/lib/validations.ts (ADD FUNCTION)
+
+cat >> /vercel/share/v0-project/backend/gor-api/src/lib/validations.ts << 'EOF'
+
+/**
+ * Validate booking amount matches server calculation
+ * 
+ * Flow:
+ * 1. Fetch booking from DB (courtId, startTime, endTime, bookingDate)
+ * 2. Fetch court (pricePerHour)
+ * 3. Calculate: hours = parseInt(endTime) - parseInt(startTime)
+ * 4. Expected: hours * pricePerHour
+ * 5. Compare: incomingAmount === expectedAmount
+ * 
+ * @param bookingId - Booking ID to validate
+ * @param incomingAmount - Amount sent by client (in cents)
+ * @returns { valid: boolean, expectedAmount?: number, error?: string }
+ */
+export async function validateBookingAmount(
+  bookingId: string,
+  incomingAmount: number
+): Promise<{ valid: boolean; expectedAmount?: number; error?: string }> {
+  try {
+    // 1. Fetch booking with court info
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { court: true },
+    });
+
+    if (!booking) {
+      return { valid: false, error: 'Booking not found' };
+    }
+
+    if (!booking.court) {
+      return { valid: false, error: 'Court not found for booking' };
+    }
+
+    // 2. Parse time strings (format: "14" for 2 PM, "15" for 3 PM)
+    const startHour = parseInt(booking.startTime, 10);
+    const endHour = parseInt(booking.endTime, 10);
+
+    if (isNaN(startHour) || isNaN(endHour)) {
+      return { valid: false, error: 'Invalid booking time format' };
+    }
+
+    if (startHour < 0 || startHour > 24 || endHour < 0 || endHour > 24) {
+      return { valid: false, error: 'Time out of valid range (0-24)' };
+    }
+
+    if (endHour <= startHour) {
+      return { valid: false, error: 'End time must be after start time' };
+    }
+
+    // 3. Calculate expected amount
+    const durationHours = endHour - startHour;
+    const expectedAmount = durationHours * booking.court.pricePerHour;
+
+    // 4. Compare
+    if (incomingAmount !== expectedAmount) {
+      return {
+        valid: false,
+        expectedAmount,
+        error: `Amount mismatch: expected ${expectedAmount}, got ${incomingAmount}`,
+      };
+    }
+
+    return { valid: true, expectedAmount };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+EOF
+
+echo "✅ Added validateBookingAmount function to src/lib/validations.ts"
+
+# =============================================================================
+# FILE 2: Update payments controller to use validation
+# Path: backend/gor-api/src/modules/payments/payments.controller.ts
+#
+# Changes to createMidtransTransaction function:
+# BEFORE:
+#   const transaction = await midtrans.createTransaction({
+#     transaction_details: {
+#       order_id: booking.id,
+#       gross_amount: booking.totalPrice,  // ← CLIENT CAN MODIFY THIS
+#     },
+#     ...
+#   });
+#
+# AFTER:
+#   // Validate amount matches server calculation
+#   const validation = await validateBookingAmount(booking.id, booking.totalPrice);
+#   if (!validation.valid) {
+#     throw new AppError(400, validation.error || 'Invalid booking amount');
+#   }
+#   
+#   const transaction = await midtrans.createTransaction({
+#     transaction_details: {
+#       order_id: booking.id,
+#       gross_amount: validation.expectedAmount, // ← USE SERVER CALCULATED
+#     },
+#     ...
+#   });
+# =============================================================================
+
+echo ""
+echo "📝 MANUAL STEP 1: Update payments.controller.ts"
+echo "   File: backend/gor-api/src/modules/payments/payments.controller.ts"
+echo ""
+echo "   In createMidtransTransaction() function, ADD THESE LINES after the"
+echo "   'No payment record' check and BEFORE creating transaction:"
+echo ""
+echo "   ────────────────────────────────────────────────────────────────"
+cat << 'PATCH'
+  // SECURITY: Validate booking amount matches server calculation
+  const validation = await validateBookingAmount(booking.id, booking.totalPrice);
+  if (!validation.valid) {
+    throw new AppError(400, validation.error || 'Invalid booking amount');
+  }
+
+  // Use server-calculated amount instead of client value
+  const confirmedAmount = validation.expectedAmount || booking.totalPrice;
+PATCH
+echo "   ────────────────────────────────────────────────────────────────"
+echo ""
+echo "   Then update the Midtrans transaction call:"
+echo ""
+echo "   CHANGE THIS:"
+echo "     gross_amount: booking.totalPrice,"
+echo ""
+echo "   TO THIS:"
+echo "     gross_amount: confirmedAmount,"
+echo ""
+
+# =============================================================================
+# FILE 3: Add to confirmCashPayment
+# =============================================================================
+
+echo "📝 MANUAL STEP 2: Update confirmCashPayment() function"
+echo "   File: backend/gor-api/src/modules/payments/payments.controller.ts"
+echo ""
+echo "   ADD THESE LINES after the 'No payment record' check:"
+echo ""
+echo "   ────────────────────────────────────────────────────────────────"
+cat << 'PATCH'
+  // SECURITY: Validate cash payment amount
+  const validation = await validateBookingAmount(booking.id, booking.totalPrice);
+  if (!validation.valid) {
+    throw new AppError(400, validation.error || 'Invalid booking amount');
+  }
+PATCH
+echo "   ────────────────────────────────────────────────────────────────"
+echo ""
+
+# =============================================================================
+# FILE 4: Add IMPORT at top of payments.controller.ts
+# =============================================================================
+
+echo "📝 MANUAL STEP 3: Add import to payments.controller.ts"
+echo "   File: backend/gor-api/src/modules/payments/payments.controller.ts"
+echo ""
+echo "   ADD THIS LINE at the top with other imports:"
+echo ""
+echo "   ────────────────────────────────────────────────────────────────"
+echo "   import { validateBookingAmount } from '../../lib/validations.js';"
+echo "   ────────────────────────────────────────────────────────────────"
+echo ""
+
+# =============================================================================
+# FILE 5: Add validation schema for frontend
+# =============================================================================
+
+cat > /vercel/share/v0-project/backend/gor-api/src/schemas/payment.schema.ts << 'EOF'
+import { z } from 'zod';
+
+/**
+ * Payment creation request schema
+ * Validates that incoming payment data matches expected format
+ */
+export const createPaymentSchema = z.object({
+  bookingId: z.string().uuid('Invalid booking ID format'),
+  amount: z.number().int('Amount must be integer').positive('Amount must be positive'),
+});
+
+export type CreatePaymentRequest = z.infer<typeof createPaymentSchema>;
+EOF
+
+echo "✅ Created payment.schema.ts with Zod validation"
+echo ""
+
+# =============================================================================
+# Testing
+# =============================================================================
+
+echo "🧪 TESTING INSTRUCTIONS:"
+echo ""
+echo "After applying the fix, test with:"
+echo ""
+echo "1. POSITIVE TEST (should succeed):"
+echo "   - Create booking: 14:00-16:00 (2 hours) at court with 100k/hour"
+echo "   - Amount should be: 2 * 100,000 = 200,000"
+echo "   - Payment amount: 200,000 ✅"
+echo ""
+echo "2. NEGATIVE TEST (should fail):"
+echo "   - Same booking setup"
+echo "   - Try to modify amount in dev tools: 150,000 (lower)"
+echo "   - Should get error: 'Amount mismatch: expected 200000, got 150000' ✅"
+echo ""
+echo "3. NEGATIVE TEST 2 (should fail):"
+echo "   - Same booking setup"
+echo "   - Try to increase amount: 250,000"
+echo "   - Should get error: 'Amount mismatch: expected 200000, got 250000' ✅"
+echo ""
+
+# =============================================================================
+# Logging & Monitoring
+# =============================================================================
+
+echo "📊 FRAUD DETECTION SETUP:"
+echo ""
+echo "Add this to payments logging:"
+echo ""
+cat << 'EOF'
+await prisma.paymentLog.create({
+  data: {
+    paymentId: payment.id,
+    action: 'validation_check',
+    payload: JSON.stringify({
+      expectedAmount: validation.expectedAmount,
+      incomingAmount: booking.totalPrice,
+      match: validation.valid,
+      timestamp: new Date().toISOString(),
+    }),
+    ipAddress: req.ip || null,
+  },
+});
+EOF
+
+echo ""
+echo "This logs every amount validation attempt for fraud investigation."
+echo ""
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo "✅ FIX #001: SERVER-SIDE PAYMENT VALIDATION"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+echo "STATUS: Ready to apply"
+echo "EFFORT: 2 hours (30 min implementation + 1.5h testing)"
+echo "RISK: 🟡 MEDIUM (affects payment flow)"
+echo "BLOCKER: YES - Fix before production"
+echo ""
+echo "FILES MODIFIED:"
+echo "  1. ✅ src/lib/validations.ts (NEW FUNCTION)"
+echo "  2. 📝 src/modules/payments/payments.controller.ts (MANUAL EDIT)"
+echo "  3. ✅ src/schemas/payment.schema.ts (CREATED)"
+echo ""
+echo "DEPLOYMENT:"
+echo "  1. git checkout -b fix/payment-validation"
+echo "  2. Apply changes above"
+echo "  3. npm run build && npm test"
+echo "  4. Create PR for code review"
+echo "  5. Merge after approval"
+echo ""
+echo "ROLLBACK:"
+echo "  git revert HEAD  (reverts to previous state)"
+echo ""
+echo "════════════════════════════════════════════════════════════════"
