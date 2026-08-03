@@ -8,7 +8,7 @@ node_modules
 .DS_Store
 *.log
 .claude
-frontend
+backend
 e2e-tests
 Dockerfile*
 docker-compose.yml
