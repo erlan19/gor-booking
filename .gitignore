@@ -51,6 +51,7 @@ railway.json
 *.db
 *.sqlite
 *.sqlite3
+backend/src/data/db.json
 
 # Playwright
 .playwright-mcp/
