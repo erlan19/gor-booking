@@ -16,11 +16,20 @@ const ALLOWED_ORIGINS = [
   ...(process.env.CORS_ORIGIN?.split(",") ?? []),
 ];
 
+function isLocal(origin?: string) {
+  return !!origin && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+}
+
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true);
-      else cb(new Error("CORS blocked"));
+      // allow localhost dev servers via the Vite proxy; also browsers hitting
+      // the API directly with no Origin header (same-origin / curl) pass through
+      if (!origin || isLocal(origin) || ALLOWED_ORIGINS.includes(origin)) {
+        cb(null, true);
+      } else {
+        cb(new Error("CORS blocked"));
+      }
     },
   })
 );
@@ -43,6 +52,13 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
 
 app.use((req, res) => res.status(404).json({ error: "Route tidak ditemukan" }));
+
+app.use((err: Error, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err.message === "CORS blocked") {
+    return res.status(403).json({ error: "Origin tidak diizinkan" });
+  }
+  next(err);
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
