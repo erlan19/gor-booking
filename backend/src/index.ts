@@ -10,9 +10,18 @@ import adminRoutes from "./routes/admin.js";
 
 const app = express();
 app.use(helmet());
+const ALLOWED_ORIGINS = [
+  "https://gor-booking.vercel.app",
+  "https://gor-booking-erlan19.vercel.app",
+  ...(process.env.CORS_ORIGIN?.split(",") ?? []),
+];
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : true,
+    origin: (origin, cb) => {
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true);
+      else cb(new Error("CORS blocked"));
+    },
   })
 );
 app.use(express.json({ limit: "100kb" }));

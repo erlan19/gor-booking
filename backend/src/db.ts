@@ -1,9 +1,16 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_FILE = path.join(__dirname, "data", "db.json");
+// Resolve the DB file relative to the repo root so the same db.json is used
+// whether running from src (tsx) or dist (compiled) — otherwise a fresh
+// production deployment starts with an empty database.
+const CWD = process.cwd();
+const DB_FILE = path.join(CWD, "src", "data", "db.json");
+const fallback = path.join(CWD, "dist", "data", "db.json");
+
+function ensureDataDir() {
+  fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
+}
 
 export type Role = "client" | "cashier" | "admin";
 export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
@@ -65,9 +72,12 @@ interface DBShape {
 }
 
 function loadDB(): DBShape {
+  const empty: DBShape = { users: [], courts: [], bookings: [], payments: [] };
   if (!fs.existsSync(DB_FILE)) {
-    const empty: DBShape = { users: [], courts: [], bookings: [], payments: [] };
-    fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
+    if (fs.existsSync(fallback)) {
+      return JSON.parse(fs.readFileSync(fallback, "utf-8"));
+    }
+    ensureDataDir();
     fs.writeFileSync(DB_FILE, JSON.stringify(empty, null, 2));
     return empty;
   }
@@ -77,6 +87,7 @@ function loadDB(): DBShape {
 let db = loadDB();
 
 function persist() {
+  ensureDataDir();
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 }
 
