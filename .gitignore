@@ -66,3 +66,15 @@ fix-*.js
 FIX_*.patch
 *.yml.bak
 *.log
+
+# Dev scratch / exports (not part of the app)
+*.png
+*.jpeg
+*.yml
+pnpm-lock.yaml
+start-server.js
+run-e2e.sh
+booking-venue/
+test-extract/
+docs/
+api/
