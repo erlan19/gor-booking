@@ -12,7 +12,10 @@ const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
-  phone: z.string().min(6),
+  phone: z
+    .string()
+    .min(8)
+    .regex(/^\+?[0-9\- ]{8,15}$/, "Nomor HP tidak valid"),
 });
 
 router.post("/register", (req, res) => {
@@ -51,7 +54,10 @@ router.post("/login", (req, res) => {
   }
   const { email, password } = parsed.data;
   const user = store.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-  if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+  const passwordValid = user
+    ? bcrypt.compareSync(password, user.passwordHash)
+    : false;
+  if (!user || !passwordValid) {
     return res.status(401).json({ error: "Email atau password salah" });
   }
   const token = signToken(user);

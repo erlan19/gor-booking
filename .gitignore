@@ -57,3 +57,12 @@ backend/src/data/db.json
 .playwright-mcp/
 test-results/
 playwright-report/
+e2e-tests/playwright-report/
+e2e-tests/test-results/
+
+# Scratch / working files
+.claude/worktrees/
+fix-*.js
+FIX_*.patch
+*.yml.bak
+*.log

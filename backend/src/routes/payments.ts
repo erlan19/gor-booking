@@ -14,6 +14,11 @@ router.get("/", requireAuth, requireRole("admin", "cashier"), (req, res) => {
 router.get("/booking/:bookingId", requireAuth, (req, res) => {
   const payment = store.payments.find((p) => p.bookingId === req.params.bookingId);
   if (!payment) return res.status(404).json({ error: "Pembayaran belum dibuat" });
+  const booking = store.bookings.find((b) => b.id === payment.bookingId);
+  if (!booking) return res.status(404).json({ error: "Booking terkait tidak ditemukan" });
+  if (req.user!.role === "client" && booking.userId !== req.user!.id) {
+    return res.status(403).json({ error: "Akses ditolak" });
+  }
   res.json({ payment });
 });
 
@@ -29,6 +34,9 @@ router.post("/:bookingId/simulate", requireAuth, (req, res) => {
   if (!booking) return res.status(404).json({ error: "Booking tidak ditemukan" });
   if (req.user!.role === "client" && booking.userId !== req.user!.id) {
     return res.status(403).json({ error: "Akses ditolak" });
+  }
+  if (booking.status === "cancelled" || booking.status === "completed") {
+    return res.status(400).json({ error: "Booking ini sudah tidak bisa dibayar" });
   }
   const parsed = simulateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });

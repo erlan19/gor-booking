@@ -44,14 +44,24 @@ router.get("/", requireAuth, requireRole("admin", "cashier"), (req, res) => {
   res.json({ bookings });
 });
 
+const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Format jam tidak valid");
+const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid");
+
 const createSchema = z.object({
   courtId: z.string(),
-  date: z.string(),
-  startTime: z.string(),
-  endTime: z.string(),
+  date: dateSchema,
+  startTime: timeSchema,
+  endTime: timeSchema,
   customerName: z.string().min(2),
-  customerPhone: z.string().min(6),
+  customerPhone: z
+    .string()
+    .min(8)
+    .regex(/^\+?[0-9\- ]{8,15}$/, "Nomor HP tidak valid"),
 });
+
+// allowed operation hours (07:00 - 22:00), enforced on server
+const OPEN_MIN = 7 * 60;
+const CLOSE_MIN = 22 * 60;
 
 router.post("/", requireAuth, (req, res) => {
   const parsed = createSchema.safeParse(req.body);
@@ -62,6 +72,12 @@ router.post("/", requireAuth, (req, res) => {
   if (!court) return res.status(404).json({ error: "Lapangan tidak ditemukan" });
   if (toMinutes(endTime) <= toMinutes(startTime)) {
     return res.status(400).json({ error: "Jam selesai harus setelah jam mulai" });
+  }
+  if (toMinutes(startTime) < OPEN_MIN || toMinutes(endTime) > CLOSE_MIN) {
+    return res.status(400).json({ error: "Jam operasional 07:00 - 22:00" });
+  }
+  if (date < new Date().toISOString().slice(0, 10)) {
+    return res.status(400).json({ error: "Tanggal tidak boleh di masa lalu" });
   }
 
   const conflict = store.bookings.some(
@@ -74,6 +90,8 @@ router.post("/", requireAuth, (req, res) => {
   if (conflict) return res.status(409).json({ error: "Slot waktu sudah dibooking" });
 
   const durationHours = (toMinutes(endTime) - toMinutes(startTime)) / 60;
+  // price computed server-side — never trust client-supplied price
+  const totalPrice = Math.round(court.pricePerHour * durationHours);
   const booking: Booking = {
     id: nanoid(10),
     courtId,
@@ -84,7 +102,7 @@ router.post("/", requireAuth, (req, res) => {
     startTime,
     endTime,
     durationHours,
-    totalPrice: Math.round(court.pricePerHour * durationHours),
+    totalPrice,
     status: "pending",
     source: "online",
     createdAt: new Date().toISOString(),
@@ -99,6 +117,7 @@ const cashierSchema = createSchema.extend({
   method: z.enum(["cash", "transfer", "qris", "card"]).default("cash"),
 });
 
+
 router.post("/cashier", requireAuth, requireRole("cashier", "admin"), (req, res) => {
   const parsed = cashierSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
@@ -108,6 +127,12 @@ router.post("/cashier", requireAuth, requireRole("cashier", "admin"), (req, res)
   if (!court) return res.status(404).json({ error: "Lapangan tidak ditemukan" });
   if (toMinutes(endTime) <= toMinutes(startTime)) {
     return res.status(400).json({ error: "Jam selesai harus setelah jam mulai" });
+  }
+  if (toMinutes(startTime) < OPEN_MIN || toMinutes(endTime) > CLOSE_MIN) {
+    return res.status(400).json({ error: "Jam operasional 07:00 - 22:00" });
+  }
+  if (date < new Date().toISOString().slice(0, 10)) {
+    return res.status(400).json({ error: "Tanggal tidak boleh di masa lalu" });
   }
   const conflict = store.bookings.some(
     (b) =>

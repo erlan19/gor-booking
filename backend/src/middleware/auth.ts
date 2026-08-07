@@ -1,8 +1,18 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import crypto from "node:crypto";
 import type { Role } from "../db.js";
 
-export const JWT_SECRET = process.env.JWT_SECRET || "gor-dev-secret-change-me";
+export const JWT_SECRET =
+  process.env.JWT_SECRET || "gor-dev-secret-change-me";
+
+// constant-time comparison prevents timing attacks
+export function safeEqual(a: string, b: string) {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 export interface AuthPayload {
   id: string;
