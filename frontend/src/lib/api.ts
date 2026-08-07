@@ -1,4 +1,15 @@
-const BASE = import.meta.env.VITE_API_URL || "/api";
+// In production, always hit the Railway backend directly.
+// Vercel env VITE_API_URL is set to "/api/v1" (wrong — it's a relative stub URL).
+// This override forces production to always use the real backend.
+const BACKEND_URL = import.meta.env.VITE_API_URL;
+const isLocal = () => typeof window !== "undefined" && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(window.location.hostname);
+
+const BASE = (() => {
+  if (BACKEND_URL && !BACKEND_URL.startsWith("/")) return BACKEND_URL;   // absolute URL from env
+  if (isLocal()) return "http://localhost:4000";                          // dev mode
+  // production: always hit the real backend (env var is broken /api/v1)
+  return "https://gor-booking-production.up.railway.app";
+})();
 
 export type Role = "client" | "cashier" | "admin";
 
