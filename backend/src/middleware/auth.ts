@@ -3,8 +3,12 @@ import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import type { Role } from "../db.js";
 
-export const JWT_SECRET =
-  process.env.JWT_SECRET || "gor-dev-secret-change-me";
+const configuredSecret = process.env.JWT_SECRET?.trim();
+if (process.env.NODE_ENV === "production" && (!configuredSecret || configuredSecret.length < 40)) {
+  throw new Error("JWT_SECRET wajib diisi dan minimal 40 karakter saat production");
+}
+
+export const JWT_SECRET = configuredSecret || "gor-dev-secret-change-me";
 
 // constant-time comparison prevents timing attacks
 export function safeEqual(a: string, b: string) {

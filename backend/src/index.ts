@@ -7,6 +7,7 @@ import courtRoutes from "./routes/courts.js";
 import bookingRoutes from "./routes/bookings.js";
 import paymentRoutes from "./routes/payments.js";
 import adminRoutes from "./routes/admin.js";
+import "./seed.js";
 
 const app = express();
 app.use(helmet());

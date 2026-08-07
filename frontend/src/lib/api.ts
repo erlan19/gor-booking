@@ -1,4 +1,25 @@
-const BASE = import.meta.env.VITE_API_URL || "/api";
+function normalizeApiBase(value: string | undefined) {
+  const configured = value?.trim();
+  if (!configured) return "/api";
+
+  if (configured.startsWith("/")) {
+    const path = configured.replace(/\/+$/, "");
+    return path === "/api" || path === "/api/v1" ? "/api" : `${path}/api`;
+  }
+
+  try {
+    const url = new URL(configured);
+    const pathname = url.pathname.replace(/\/+$/, "");
+    url.pathname = pathname === "/api" || pathname === "/api/v1" ? "/api" : `${pathname}/api`;
+    url.search = "";
+    url.hash = "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return configured.replace(/\/+$/, "").replace(/\/api\/v1$/, "").replace(/\/api$/, "") + "/api";
+  }
+}
+
+const BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 export type Role = "client" | "cashier" | "admin";
 
@@ -71,9 +92,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { ...options, headers });
+  } catch {
+    throw new ApiError(
+      "Tidak dapat terhubung ke server. Pastikan backend aktif dan VITE_API_URL sudah berisi URL Railway yang benar.",
+      0
+    );
+  }
+
   const isJson = res.headers.get("content-type")?.includes("application/json");
-  const data = isJson ? await res.json() : null;
+  const data = isJson ? await res.json().catch(() => null) : null;
 
   if (!res.ok) {
     throw new ApiError(data?.error || `Request gagal (${res.status})`, res.status);
