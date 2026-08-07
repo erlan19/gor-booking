@@ -6,9 +6,8 @@ const isLocal = () => typeof window !== "undefined" && /^(localhost|127\.0\.0\.1
 
 const BASE = (() => {
   if (BACKEND_URL && !BACKEND_URL.startsWith("/")) return BACKEND_URL;   // absolute URL from env
-  if (isLocal()) return "http://localhost:4000";                          // dev mode
-  // production: always hit the real backend (env var is broken /api/v1)
-  return "https://gor-booking-production.up.railway.app";
+  if (isLocal()) return "/api";                                          // dev: Vite proxy → :4000
+  return "https://gor-booking-production.up.railway.app/api";            // production → Railway
 })();
 
 export type Role = "client" | "cashier" | "admin";
